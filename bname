@@ -3,12 +3,7 @@
 bname_file=$1
 bname_bucket=$(while read -r line; do echo "${line}"; done | sort | xargs)
 
-echo "$bname_bucket"
-
-exit
-
-echo "$bname_files" | xargs -n1)
-
+#echo "$bname_bucket"
 #echo "Files: $bname_files"
 #for bname_cursor in $bname_files; do
 #  echo "f: $bname_cursor"
@@ -38,10 +33,10 @@ function bname_year_mask() {
 ## Build
 bname_build_year=yes
 bname_snapshot=$(bname_snapshot 1 "$bname_file")
-for bname_cursor in $bname_files; do
-  bname_a=$(bname_year_mask "$bname_snapshot")
-  bname_b=$(bname_year_mask "$bname_cursor")
-  echo "## check: $bname_snapshot ($bname_a) vs $bname_cursor ($bname_b)"
+bname_a=$(bname_year_mask "$bname_snapshot")
+for file in $bname_bucket; do
+  bname_b=$(bname_year_mask "$file")
+  echo "## check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
   [ "${bname_a}" = "${bname_b}" ] && bname_build_year=no
 done
 if [ "${bname_build_year}" = "yes" ]; then
