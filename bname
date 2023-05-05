@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+bname_file=$1
+bname_bucket=$(while read -r line; do echo "${line}"; done | sort | xargs)
+
+echo "$bname_bucket"
+
+exit
+
+echo "$bname_files" | xargs -n1)
+
+#echo "Files: $bname_files"
+#for bname_cursor in $bname_files; do
+#  echo "f: $bname_cursor"
+#done
+
+function bname_key() {
+  date -d "${BNAME_DATE}" '+%y%d_%y%d'
+}
+
+function bname_snapshot() {
+  local bname_key=$(bname_key)
+  echo "${1}${bname_key}_${2}"
+}
+
+##
+#
+##
+function bname_year_mask() {
+  # shellcheck disable=SC2001
+  echo "$1" | sed 's/./0/5'
+}
+
+## ====
+## Year
+## ====
+
+## Build
+bname_build_year=yes
+bname_snapshot=$(bname_snapshot 1 "$bname_file")
+for bname_cursor in $bname_files; do
+  bname_a=$(bname_year_mask "$bname_snapshot")
+  bname_b=$(bname_year_mask "$bname_cursor")
+  echo "## check: $bname_snapshot ($bname_a) vs $bname_cursor ($bname_b)"
+  [ "${bname_a}" = "${bname_b}" ] && bname_build_year=no
+done
+if [ "${bname_build_year}" = "yes" ]; then
+  echo "cp $bname_snapshot"
+else
+  echo "## ignore '$bname_snapshot'"
+fi
+
+## Clean
+bname_snapshot=$(bname_key "$bname_file")
+echo "rm $bname_snapshot"
+
+
+exit
+
+
+
+
+## Month
+bname_snapshot=$(bname_key "$bname_file")
+echo "cp $bname_snapshot"
+
+## Week
+bname_snapshot=$(bname_key "$bname_file")
+echo "cp $bname_snapshot"
+
+## Day
+bname_snapshot=$(bname_key "$bname_file")
+echo "cp $bname_snapshot"
+
+
+
+
+
