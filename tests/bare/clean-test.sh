@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+export BNAME_DATE=2021-01-01
+
+cat << EOF | ./bname file.zip
+1_22WWMMDD_YYMMDDHHMM_file.zip
+1_21WWMMDD_YYMMDDHHMM_file.zip
+1_20WWMMDD_YYMMDDHHMM_file.zip
+1_19WWMMDD_YYMMDDHHMM_file.zip
+1_18WWMMDD_YYMMDDHHMM_file.zip
+1_17WWMMDD_YYMMDDHHMM_file.zip
+1_16WWMMDD_YYMMDDHHMM_file.zip
+EOF

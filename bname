@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
+set -e
 
 bname_file=$1
-bname_bucket=$(while read -r line; do echo "${line}"; done | sort | xargs)
+bname_bucket=$(while read -r line; do echo "${line}"; done | sort -r | xargs)
 
 #echo "$bname_bucket"
 #echo "Files: $bname_files"
@@ -10,20 +11,40 @@ bname_bucket=$(while read -r line; do echo "${line}"; done | sort | xargs)
 #done
 
 function bname_key() {
-  date -d "${BNAME_DATE}" '+%y%d_%y%d'
+  date -d "${BNAME_DATE}" '+%y%U%m%d_%y%m%d%H%M'
 }
 
 function bname_snapshot() {
   local bname_key=$(bname_key)
-  echo "${1}${bname_key}_${2}"
+  echo "${1}_${bname_key}_${2}"
 }
 
 ##
 #
 ##
-function bname_year_mask() {
-  # shellcheck disable=SC2001
-  echo "$1" | sed 's/./0/5'
+function bname_char_mask() {
+  local file=$1
+  for position in $2; do
+    # shellcheck disable=SC2001
+    file=$(echo "${file}" | sed "s/./^/${position}")
+  done
+  echo "${file}"
+}
+
+##
+#
+##
+function bname_mask() {
+  case "$1" in
+    build:year)
+      # shellcheck disable=SC2001
+      bname_char_mask "$2" "5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21"
+      ;;
+    clean:year)
+      # shellcheck disable=SC2001
+      bname_char_mask "$2" "3 4 5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21"
+      ;;
+  esac
 }
 
 ## ====
@@ -31,24 +52,43 @@ function bname_year_mask() {
 ## ====
 
 ## Build
-bname_build_year=yes
+bname_build=yes
 bname_snapshot=$(bname_snapshot 1 "$bname_file")
-bname_a=$(bname_year_mask "$bname_snapshot")
+bname_a=$(bname_mask "build:year" "$bname_snapshot")
 for file in $bname_bucket; do
-  bname_b=$(bname_year_mask "$file")
-  echo "## check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
-  [ "${bname_a}" = "${bname_b}" ] && bname_build_year=no
+  bname_b=$(bname_mask "build:year" "$file")
+  #echo "## build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
+  [ "${bname_a}" = "${bname_b}" ] && bname_build=no
 done
-if [ "${bname_build_year}" = "yes" ]; then
+if [ "${bname_build}" = "yes" ]; then
   echo "cp $bname_snapshot"
 else
   echo "## ignore '$bname_snapshot'"
 fi
 
 ## Clean
-bname_snapshot=$(bname_key "$bname_file")
-echo "rm $bname_snapshot"
-
+bname_count=0
+bname_clean=no
+bname_snapshot=$(bname_snapshot 1 "$bname_file")
+bname_build_a=$(bname_mask "build:year" "$bname_snapshot")
+bname_clean_a=$(bname_mask "clean:year" "$bname_snapshot")
+for file in $bname_bucket; do
+  bname_build_b=$(bname_mask "build:year" "$file")
+  bname_clean_b=$(bname_mask "clean:year" "$file")
+  #echo "## - build check: $bname_snapshot ($bname_build_a) vs $file ($bname_build_b)"
+  #echo "##   clean check: $bname_snapshot ($bname_clean_a) vs $file ($bname_clean_b)"
+  if [ "${bname_clean_a}" = "${bname_clean_b}" ]; then
+    if [ "${bname_build_a}" = "${bname_build_b}" ]; then
+      bname_clean=yes
+    fi
+    if [ "${bname_clean}" = "yes" ]; then
+      bname_count=$((++bname_count))
+    fi
+    if [ "${bname_count}" -gt "1" ]; then
+      echo "rm ${file}"
+    fi
+  fi
+done
 
 exit
 
