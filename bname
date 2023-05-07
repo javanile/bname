@@ -18,16 +18,16 @@ function bname_snapshot() {
   local bname_key=$(bname_key)
   case $1 in
     year)
-      echo "4_${bname_key}_${2}"
+      echo "1_${bname_key}_${2}"
       ;;
     month)
-      echo "3_${bname_key}_${2}"
-      ;;
-    week)
       echo "2_${bname_key}_${2}"
       ;;
+    week)
+      echo "3_${bname_key}_${2}"
+      ;;
     day)
-      echo "1_${bname_key}_${2}"
+      echo "4_${bname_key}_${2}"
       ;;
   esac
 }
