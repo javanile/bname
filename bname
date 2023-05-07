@@ -47,67 +47,65 @@ function bname_mask() {
   esac
 }
 
-## ====
-## Year
-## ====
-
-## Build
-bname_build=yes
-bname_snapshot=$(bname_snapshot 1 "$bname_file")
-bname_a=$(bname_mask "build:year" "$bname_snapshot")
-for file in $bname_bucket; do
-  bname_b=$(bname_mask "build:year" "$file")
-  #echo "## build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
-  [ "${bname_a}" = "${bname_b}" ] && bname_build=no
-done
-if [ "${bname_build}" = "yes" ]; then
-  echo "cp $bname_snapshot"
-else
-  echo "## ignore '$bname_snapshot'"
-fi
-
-## Clean
-bname_count=0
-bname_clean=no
-bname_snapshot=$(bname_snapshot 1 "$bname_file")
-bname_build_a=$(bname_mask "build:year" "$bname_snapshot")
-bname_clean_a=$(bname_mask "clean:year" "$bname_snapshot")
-for file in $bname_bucket; do
-  bname_build_b=$(bname_mask "build:year" "$file")
-  bname_clean_b=$(bname_mask "clean:year" "$file")
-  #echo "## - build check: $bname_snapshot ($bname_build_a) vs $file ($bname_build_b)"
-  #echo "##   clean check: $bname_snapshot ($bname_clean_a) vs $file ($bname_clean_b)"
-  if [ "${bname_clean_a}" = "${bname_clean_b}" ]; then
-    if [ "${bname_build_a}" = "${bname_build_b}" ]; then
-      bname_clean=yes
-    fi
-    if [ "${bname_clean}" = "yes" ]; then
-      bname_count=$((++bname_count))
-    fi
-    if [ "${bname_count}" -gt "1" ]; then
-      echo "rm ${file}"
-    fi
+##
+# Build
+##
+function bname_build() {
+  bname_stage=$1
+  bname_build=yes
+  bname_snapshot=$(bname_snapshot 1 "$bname_file")
+  bname_a=$(bname_mask "build:${bname_stage}" "$bname_snapshot")
+  for file in $bname_bucket; do
+    bname_b=$(bname_mask "build:${bname_stage}" "$file")
+    #echo "## build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
+    [ "${bname_a}" = "${bname_b}" ] && bname_build=no
+  done
+  if [ "${bname_build}" = "yes" ]; then
+    echo "cp $bname_snapshot"
+  else
+    echo "## ignore '$bname_snapshot'"
   fi
-done
+}
 
-exit
+##
+# Clean
+##
+function bname_clean() {
+  bname_count=0
+  bname_clean=no
+  bname_stage=$1
+  bname_snapshot=$(bname_snapshot 1 "$bname_file")
+  bname_build_a=$(bname_mask "build:${bname_stage}" "$bname_snapshot")
+  bname_clean_a=$(bname_mask "clean:${bname_stage}" "$bname_snapshot")
+  for file in $bname_bucket; do
+    bname_build_b=$(bname_mask "build:${bname_stage}" "$file")
+    bname_clean_b=$(bname_mask "clean:${bname_stage}" "$file")
+    #echo "## - build check: $bname_snapshot ($bname_build_a) vs $file ($bname_build_b)"
+    #echo "##   clean check: $bname_snapshot ($bname_clean_a) vs $file ($bname_clean_b)"
+    if [ "${bname_clean_a}" = "${bname_clean_b}" ]; then
+      if [ "${bname_build_a}" = "${bname_build_b}" ]; then
+        bname_clean=yes
+      fi
+      if [ "${bname_clean}" = "yes" ]; then
+        bname_count=$((++bname_count))
+      fi
+      if [ "${bname_count}" -gt "1" ]; then
+        echo "rm ${file}"
+      fi
+    fi
+  done
+}
 
+##
+#
+##
+function main() {
+  bname_stages="year month week day"
+  for stage in $bname_stages; do
+    echo "## Stage: ${stage}"
+    bname_build "$stage"
+    bname_clean "$stage"
+  done
+}
 
-
-
-## Month
-bname_snapshot=$(bname_key "$bname_file")
-echo "cp $bname_snapshot"
-
-## Week
-bname_snapshot=$(bname_key "$bname_file")
-echo "cp $bname_snapshot"
-
-## Day
-bname_snapshot=$(bname_key "$bname_file")
-echo "cp $bname_snapshot"
-
-
-
-
-
+main
