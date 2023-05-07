@@ -11,12 +11,25 @@ bname_bucket=$(while read -r line; do echo "${line}"; done | sort -r | xargs)
 #done
 
 function bname_key() {
-  date -d "${BNAME_DATE}" '+%y%U%m%d_%y%m%d%H%M'
+  date -d "${BNAME_DATE}" '+%y%m%d%U_%Y%m%d%H%M'
 }
 
 function bname_snapshot() {
   local bname_key=$(bname_key)
-  echo "${1}_${bname_key}_${2}"
+  case $1 in
+    year)
+      echo "4_${bname_key}_${2}"
+      ;;
+    month)
+      echo "3_${bname_key}_${2}"
+      ;;
+    week)
+      echo "2_${bname_key}_${2}"
+      ;;
+    day)
+      echo "1_${bname_key}_${2}"
+      ;;
+  esac
 }
 
 ##
@@ -36,9 +49,33 @@ function bname_char_mask() {
 ##
 function bname_mask() {
   case "$1" in
+    build:day)
+      # shellcheck disable=SC2001
+      bname_char_mask "$2" "9 10 12 13 14 15 16 17 18 19 20 21 22 23"
+      ;;
+    build:week)
+      # shellcheck disable=SC2001
+      bname_char_mask "$2" "5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21 22 23"
+      ;;
+    build:month)
+      # shellcheck disable=SC2001
+      bname_char_mask "$2" "5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21 22 23"
+      ;;
     build:year)
       # shellcheck disable=SC2001
-      bname_char_mask "$2" "5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21"
+      bname_char_mask "$2" "5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21 22 23"
+      ;;
+    clean:day)
+      # shellcheck disable=SC2001
+      bname_char_mask "$2" "3 4 5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21"
+      ;;
+    clean:week)
+      # shellcheck disable=SC2001
+      bname_char_mask "$2" "3 4 5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21"
+      ;;
+    clean:month)
+      # shellcheck disable=SC2001
+      bname_char_mask "$2" "3 4 5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21"
       ;;
     clean:year)
       # shellcheck disable=SC2001
@@ -53,11 +90,11 @@ function bname_mask() {
 function bname_build() {
   bname_stage=$1
   bname_build=yes
-  bname_snapshot=$(bname_snapshot 1 "$bname_file")
+  bname_snapshot=$(bname_snapshot "${bname_stage}" "${bname_file}")
   bname_a=$(bname_mask "build:${bname_stage}" "$bname_snapshot")
   for file in $bname_bucket; do
     bname_b=$(bname_mask "build:${bname_stage}" "$file")
-    #echo "## build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
+    echo "## build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
     [ "${bname_a}" = "${bname_b}" ] && bname_build=no
   done
   if [ "${bname_build}" = "yes" ]; then
@@ -74,7 +111,7 @@ function bname_clean() {
   bname_count=0
   bname_clean=no
   bname_stage=$1
-  bname_snapshot=$(bname_snapshot 1 "$bname_file")
+  bname_snapshot=$(bname_snapshot "${bname_stage}" "${bname_file}")
   bname_build_a=$(bname_mask "build:${bname_stage}" "$bname_snapshot")
   bname_clean_a=$(bname_mask "clean:${bname_stage}" "$bname_snapshot")
   for file in $bname_bucket; do
@@ -100,11 +137,12 @@ function bname_clean() {
 #
 ##
 function main() {
-  bname_stages="year month week day"
+  bname_stages="day week month year"
+  bname_stages="day"
   for stage in $bname_stages; do
-    echo "## Stage: ${stage}"
+    #echo "## Stage: ${stage}"
     bname_build "$stage"
-    bname_clean "$stage"
+    #bname_clean "$stage"
   done
 }
 

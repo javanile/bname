@@ -8,3 +8,6 @@ test-date: fix-permissions
 
 test-clean: fix-permissions
 	@bash tests/bare/clean-test.sh
+
+test-first-build: fix-permissions
+	@bash tests/bare/first-build-test.sh
