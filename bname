@@ -11,7 +11,17 @@ was_sourced="${BASH_SOURCE[0]}"
 #done
 
 function bname_key() {
-  date -d "${BNAME_DATE}" '+%y%m%d%U_%Y%m%d%H%M'
+  #date -d "${BNAME_DATE}" '+%y%m%d%U'
+  year=$(( $(date -d "${BNAME_DATE}" '+%y') + 45 ))
+  month=$(( $(date -d "${BNAME_DATE}" '+%m') + 64 ))
+  week=$(( $(date -d "${BNAME_DATE}" '+%U') + 65 ))
+  day=$(date -d "${BNAME_DATE}" '+%d')
+  # shellcheck disable=SC2059
+  printf "\x$(printf %x $year)\x$(printf %x $month)$day\x$(printf %x $week)"
+}
+
+function bname_prefix() {
+  date -d "${BNAME_DATE}" '+%Y%m%d%H%M'
 }
 
 function bname_date() {
@@ -20,18 +30,19 @@ function bname_date() {
 
 function bname_snapshot() {
   local bname_key=$(bname_key)
+  local bname_prefix=$(bname_prefix)
   case $1 in
     year)
-      echo "A${bname_key}_${2}"
+      echo "${bname_prefix}_A${bname_key}_${2}"
       ;;
     month)
-      echo "B${bname_key}_${2}"
+      echo "${bname_prefix}_B${bname_key}_${2}"
       ;;
     week)
-      echo "C${bname_key}_${2}"
+      echo "${bname_prefix}_C${bname_key}_${2}"
       ;;
     day)
-      echo "D${bname_key}_${2}"
+      echo "${bname_prefix}_D${bname_key}_${2}"
       ;;
   esac
 }
