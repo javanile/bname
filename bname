@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-bname_file=$1
-bname_bucket=$(while read -r line; do echo "${line}"; done | sort -r | xargs)
+was_sourced="${BASH_SOURCE[0]}"
+[ "${was_sourced}" = "$0" ] && was_sourced=
 
 #echo "$bname_bucket"
 #echo "Files: $bname_files"
@@ -28,6 +28,19 @@ function bname_snapshot() {
       ;;
     day)
       echo "4_${bname_key}_${2}"
+      ;;
+  esac
+}
+
+##
+#
+##
+function bname_retention() {
+  local bname_retention=${BNAME_RETENTION:-1/0}
+
+  case $1 in
+    day)
+      echo "${bname_retention}" | cut -d/ -f1
       ;;
   esac
 }
@@ -98,9 +111,9 @@ function bname_build() {
     [ "${bname_a}" = "${bname_b}" ] && bname_build=no
   done
   if [ "${bname_build}" = "yes" ]; then
-    echo "cp $bname_snapshot"
+    echo "+ $bname_snapshot"
   else
-    echo "## ignore '$bname_snapshot'"
+    echo "# ignore '$bname_snapshot'"
   fi
 }
 
@@ -127,7 +140,7 @@ function bname_clean() {
         bname_count=$((++bname_count))
       fi
       if [ "${bname_count}" -gt "1" ]; then
-        echo "rm ${file}"
+        echo "- ${file}"
       fi
     fi
   done
@@ -137,6 +150,8 @@ function bname_clean() {
 #
 ##
 function main() {
+  bname_file=$1
+  bname_bucket=$(while read -r line; do echo "${line}"; done | sort -r | xargs)
   bname_stages="day week month year"
   bname_stages="day"
   for stage in $bname_stages; do
@@ -146,4 +161,11 @@ function main() {
   done
 }
 
-main
+##
+#
+##
+if [ -n "${was_sourced}" ]; then
+  export -f bname_retention
+else
+  main "${@}"
+fi

@@ -11,3 +11,6 @@ test-clean: fix-permissions
 
 test-first-build: fix-permissions
 	@bash tests/bare/first-build-test.sh
+
+test-retention:
+	@bash -x tests/bare/retention-test.sh

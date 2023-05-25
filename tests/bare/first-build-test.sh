@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+set -e
 
 echo "====[ Test #1 ]===="
 export BNAME_DATE=2021-01-01
