@@ -13,3 +13,4 @@ cat << EOF | ./bname file.zip
 3_21000101_202101010000_file.zip
 4_21000101_202101010000_file.zip
 EOF
+3

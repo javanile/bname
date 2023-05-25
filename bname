@@ -14,20 +14,24 @@ function bname_key() {
   date -d "${BNAME_DATE}" '+%y%m%d%U_%Y%m%d%H%M'
 }
 
+function bname_date() {
+  date -d "${BNAME_DATE}" '+%y-%m-%d (%U) %H:%M'
+}
+
 function bname_snapshot() {
   local bname_key=$(bname_key)
   case $1 in
     year)
-      echo "1_${bname_key}_${2}"
+      echo "A${bname_key}_${2}"
       ;;
     month)
-      echo "2_${bname_key}_${2}"
+      echo "B${bname_key}_${2}"
       ;;
     week)
-      echo "3_${bname_key}_${2}"
+      echo "C${bname_key}_${2}"
       ;;
     day)
-      echo "4_${bname_key}_${2}"
+      echo "D${bname_key}_${2}"
       ;;
   esac
 }
@@ -36,11 +40,34 @@ function bname_snapshot() {
 #
 ##
 function bname_retention() {
-  local bname_retention=${BNAME_RETENTION:-1/0}
+  local retention="${BNAME_RETENTION:-*/0/0/0}///"
+
+  local retention_day=$(echo "${retention}" | cut -d/ -f1)
+  local retention_week=$(echo "${retention}" | cut -d/ -f2)
+  local retention_month=$(echo "${retention}" | cut -d/ -f3)
+  local retention_year=$(echo "${retention}" | cut -d/ -f4)
+
+  [ -z "${retention_week}" ] && local retention_week=0
+  [ -z "${retention_month}" ] && local retention_month=0
+  [ -z "${retention_year}" ] && local retention_year=0
+
+  local retention="${retention_day}/${retention_week}/${retention_month}/${retention_year}"
 
   case $1 in
     day)
-      echo "${bname_retention}" | cut -d/ -f1
+      echo "${retention}" | cut -d/ -f1
+      ;;
+    week)
+      echo "${retention}" | cut -d/ -f2
+      ;;
+    month)
+      echo "${retention}" | cut -d/ -f3
+      ;;
+    year)
+      echo "${retention}" | cut -d/ -f4
+      ;;
+    *)
+      echo "${retention}"
       ;;
   esac
 }
@@ -107,7 +134,7 @@ function bname_build() {
   bname_a=$(bname_mask "build:${bname_stage}" "$bname_snapshot")
   for file in $bname_bucket; do
     bname_b=$(bname_mask "build:${bname_stage}" "$file")
-    echo "## build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
+    #echo "# build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
     [ "${bname_a}" = "${bname_b}" ] && bname_build=no
   done
   if [ "${bname_build}" = "yes" ]; then
@@ -153,11 +180,15 @@ function main() {
   bname_file=$1
   bname_bucket=$(while read -r line; do echo "${line}"; done | sort -r | xargs)
   bname_stages="day week month year"
-  bname_stages="day"
+  local bname_date=$(bname_date)
+  echo "# date: ${bname_date}"
   for stage in $bname_stages; do
-    #echo "## Stage: ${stage}"
-    bname_build "$stage"
-    #bname_clean "$stage"
+    local retention=$(bname_retention "${stage}")
+    if [ "${retention}" -gt "0" ]; then
+      echo "# ${stage}=${retention}"
+      bname_build "$stage"
+      bname_clean "$stage"
+    fi
   done
 }
 
