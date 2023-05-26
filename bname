@@ -168,8 +168,8 @@ function bname_clean() {
   for file in $bname_bucket; do
     bname_build_b=$(bname_mask "build:${bname_stage}" "$file")
     bname_clean_b=$(bname_mask "clean:${bname_stage}" "$file")
-    #echo "## - build check: $bname_snapshot ($bname_build_a) vs $file ($bname_build_b)"
-    #echo "##   clean check: $bname_snapshot ($bname_clean_a) vs $file ($bname_clean_b)"
+    echo "# build check: $bname_snapshot ($bname_build_a) vs $file ($bname_build_b)"
+    echo "# clean check: $bname_snapshot ($bname_clean_a) vs $file ($bname_clean_b)"
     if [ "${bname_clean_a}" = "${bname_clean_b}" ]; then
       if [ "${bname_build_a}" = "${bname_build_b}" ]; then
         bname_clean=yes
@@ -195,9 +195,11 @@ function main() {
   echo "# date: ${bname_date}"
   for stage in $bname_stages; do
     local retention=$(bname_retention "${stage}")
-    if [ "${retention}" -gt "0" ]; then
-      echo "# ${stage}=${retention}"
+    echo "# ${stage}=${retention}"
+    if [ "${retention}" = "*" ] || [ "${retention}" -gt "0" ]; then
       bname_build "$stage"
+    fi
+    if [ "${retention}" != "*" ] && [ "${retention}" -gt "0" ]; then
       bname_clean "$stage"
     fi
   done
