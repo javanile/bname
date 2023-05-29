@@ -161,6 +161,26 @@ function bname_mask() {
 }
 
 ##
+# Match
+##
+function bname_match() {
+  local type=$1
+  local snapshot=$2
+  local file=$3
+  local match_a=$(bname_mask "${type}" "$snapshot")
+  local match_b=$(bname_mask "${type}" "$file")
+
+  echo "# match ($type): $snapshot ($match_a) vs $file ($match_b)" >&2
+
+  if [ "${match_a}" = "${match_b}" ]; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+}
+
+
+##
 # Build
 ##
 function bname_build() {
@@ -188,25 +208,22 @@ function bname_clean() {
   bname_clean=no
   bname_stage=$1
   bname_snapshot=$(bname_snapshot "${bname_stage}" "${bname_file}")
-  bname_clean_a=$(bname_mask "clean:${bname_stage}" "$bname_snapshot")
+  retention=$(bname_retention "${bname_stage}")
   for file in $bname_bucket; do
-    bname_clean_b=$(bname_mask "clean:${bname_stage}" "$file")
-    echo "# clean check: $bname_snapshot ($bname_clean_a) vs $file ($bname_clean_b)"
-    if [ "${bname_clean_a}" = "${bname_clean_b}" ]; then
-      bname_build_a=$(bname_mask "build:${bname_stage}" "$bname_snapshot")
-      bname_build_b=$(bname_mask "build:${bname_stage}" "$file")
-      echo "# build check: $bname_snapshot ($bname_build_a) vs $file ($bname_build_b)"
-      if [ "${bname_build_a}" = "${bname_build_b}" ]; then
-        bname_clean=yes
-      fi
+    match=$(bname_match "build:${bname_stage}" "$bname_snapshot" "$file")
+    [ "${match}" = "yes" ] && continue
+
+    match=$(bname_match "clean:${bname_stage}" "$bname_snapshot" "$file")
+    if [ "${match}" = "yes" ]; then
+      bname_clean=yes
       if [ "${bname_clean}" = "yes" ]; then
         bname_count=$((++bname_count))
       fi
-      if [ "${bname_count}" -gt "0" ]; then
+      if [ "${bname_count}" -ge "${retention}" ]; then
         echo "- ${file}"
+      else
+        echo "# ignore: $file (by retention ${bname_count}<${retention})"
       fi
-    else
-      echo "# ignore: $file (on $bname_stage)"
     fi
   done
 }

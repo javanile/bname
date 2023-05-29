@@ -6,4 +6,6 @@ cat << EOF | ./bname file_1.zip
 file2.zip
 file1.zip
 12001_2001_file_1.zip
+12001_2001_file_1.zip
+12001_2001_file_1.zip
 EOF
