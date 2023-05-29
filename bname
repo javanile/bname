@@ -48,6 +48,11 @@ function bname_date() {
   date -d "${BNAME_DATE}" '+%y-%m-%d (%U) %H:%M'
 }
 
+function bname_log() {
+  log=$1
+  #echo "$log"
+}
+
 function bname_snapshot() {
   local bname_key=$(bname_key)
   local bname_prefix=$(bname_prefix)
@@ -138,19 +143,19 @@ function bname_mask() {
       ;;
     clean:day)
       # shellcheck disable=SC2001
-      bname_char_mask "$2" "3 4 5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21"
+      bname_char_mask "$2" "1 2 3 4 5 6 7 8 9 10 11 12 15 16 17 18 19"
       ;;
     clean:week)
       # shellcheck disable=SC2001
-      bname_char_mask "$2" "3 4 5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21"
+      bname_char_mask "$2" "5 6 7 8 9 10 11 12 16 17"
       ;;
     clean:month)
       # shellcheck disable=SC2001
-      bname_char_mask "$2" "3 4 5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21"
+      bname_char_mask "$2" "7 8 9 10 11 12 17 18 19"
       ;;
     clean:year)
       # shellcheck disable=SC2001
-      bname_char_mask "$2" "3 4 5 6 7 8 9 10 12 13 14 15 16 17 18 19 20 21"
+      bname_char_mask "$2" "5 6 7 8 9 10 11 12 16 17 18 19"
       ;;
   esac
 }
@@ -165,13 +170,13 @@ function bname_build() {
   bname_a=$(bname_mask "build:${bname_stage}" "$bname_snapshot")
   for file in $bname_bucket; do
     bname_b=$(bname_mask "build:${bname_stage}" "$file")
-    echo "# build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
+    #echo "# build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
     [ "${bname_a}" = "${bname_b}" ] && bname_build=no
   done
-  if [ "${bname_build}" = "yes" ]; then
-    echo "+ $bname_snapshot"
+  if [ "${bname_build}" = "no" ]; then
+    bname_log "# ignore '$bname_snapshot'"
   else
-    echo "# ignore '$bname_snapshot'"
+    echo "+ $bname_snapshot"
   fi
 }
 
@@ -183,23 +188,25 @@ function bname_clean() {
   bname_clean=no
   bname_stage=$1
   bname_snapshot=$(bname_snapshot "${bname_stage}" "${bname_file}")
-  bname_build_a=$(bname_mask "build:${bname_stage}" "$bname_snapshot")
   bname_clean_a=$(bname_mask "clean:${bname_stage}" "$bname_snapshot")
   for file in $bname_bucket; do
-    bname_build_b=$(bname_mask "build:${bname_stage}" "$file")
     bname_clean_b=$(bname_mask "clean:${bname_stage}" "$file")
-    #echo "# build check: $bname_snapshot ($bname_build_a) vs $file ($bname_build_b)"
-    #echo "# clean check: $bname_snapshot ($bname_clean_a) vs $file ($bname_clean_b)"
+    echo "# clean check: $bname_snapshot ($bname_clean_a) vs $file ($bname_clean_b)"
     if [ "${bname_clean_a}" = "${bname_clean_b}" ]; then
+      bname_build_a=$(bname_mask "build:${bname_stage}" "$bname_snapshot")
+      bname_build_b=$(bname_mask "build:${bname_stage}" "$file")
+      echo "# build check: $bname_snapshot ($bname_build_a) vs $file ($bname_build_b)"
       if [ "${bname_build_a}" = "${bname_build_b}" ]; then
         bname_clean=yes
       fi
       if [ "${bname_clean}" = "yes" ]; then
         bname_count=$((++bname_count))
       fi
-      if [ "${bname_count}" -gt "1" ]; then
+      if [ "${bname_count}" -gt "0" ]; then
         echo "- ${file}"
       fi
+    else
+      echo "# ignore: $file (on $bname_stage)"
     fi
   done
 }
