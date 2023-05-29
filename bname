@@ -4,6 +4,8 @@ set -e
 was_sourced="${BASH_SOURCE[0]}"
 [ "${was_sourced}" = "$0" ] && was_sourced=
 
+key_encoder_string="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
 #echo "$bname_bucket"
 #echo "Files: $bname_files"
 #for bname_cursor in $bname_files; do
@@ -12,12 +14,31 @@ was_sourced="${BASH_SOURCE[0]}"
 
 function bname_key() {
   #date -d "${BNAME_DATE}" '+%y%m%d%U'
-  year=$(( $(date -d "${BNAME_DATE}" '+%y') + 45 ))
-  month=$(( $(date -d "${BNAME_DATE}" '+%m') + 64 ))
-  week=$(( $(date -d "${BNAME_DATE}" '+%U') + 65 ))
-  day=$(date -d "${BNAME_DATE}" '+%d')
+  year=$(bname_key_year)
+  month=$(bname_key_month)
+  week=$(bname_key_week)
+  day=$(bname_key_day)
   # shellcheck disable=SC2059
-  printf "\x$(printf %x $year)\x$(printf %x $month)$day\x$(printf %x $week)"
+  printf "\x$(printf %x "$year")\x$(printf %x "$month")$day\x$(printf %x "$week")"
+}
+
+function bname_key_year() {
+  local key_index=$(( $(date -d "${BNAME_DATE}" '+%y') - 20 ))
+  echo "${key_encoder_string:$key_index:1}"
+}
+
+function bname_key_month() {
+  local key_index=$(( $(date -d "${BNAME_DATE}" '+%m') - 0 ))
+  echo "${key_encoder_string:$key_index:1}"
+}
+
+function bname_key_week() {
+  date -d "${BNAME_DATE}" '+%U'
+}
+
+function bname_key_day() {
+  local key_index=$(( $(date -d "${BNAME_DATE}" '+%d') - 0 ))
+  echo "${key_encoder_string:$key_index:1}"
 }
 
 function bname_prefix() {
@@ -102,7 +123,7 @@ function bname_mask() {
   case "$1" in
     build:day)
       # shellcheck disable=SC2001
-      bname_char_mask "$2" "9 10 12 13 14 15 16 17 18 19 20 21 22 23"
+      bname_char_mask "$2" "9 10 11 12 19"
       ;;
     build:week)
       # shellcheck disable=SC2001
@@ -145,7 +166,7 @@ function bname_build() {
   bname_a=$(bname_mask "build:${bname_stage}" "$bname_snapshot")
   for file in $bname_bucket; do
     bname_b=$(bname_mask "build:${bname_stage}" "$file")
-    #echo "# build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
+    echo "# build check: $bname_snapshot ($bname_a) vs $file ($bname_b)"
     [ "${bname_a}" = "${bname_b}" ] && bname_build=no
   done
   if [ "${bname_build}" = "yes" ]; then
@@ -168,8 +189,8 @@ function bname_clean() {
   for file in $bname_bucket; do
     bname_build_b=$(bname_mask "build:${bname_stage}" "$file")
     bname_clean_b=$(bname_mask "clean:${bname_stage}" "$file")
-    echo "# build check: $bname_snapshot ($bname_build_a) vs $file ($bname_build_b)"
-    echo "# clean check: $bname_snapshot ($bname_clean_a) vs $file ($bname_clean_b)"
+    #echo "# build check: $bname_snapshot ($bname_build_a) vs $file ($bname_build_b)"
+    #echo "# clean check: $bname_snapshot ($bname_clean_a) vs $file ($bname_clean_b)"
     if [ "${bname_clean_a}" = "${bname_clean_b}" ]; then
       if [ "${bname_build_a}" = "${bname_build_b}" ]; then
         bname_clean=yes
