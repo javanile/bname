@@ -4,6 +4,8 @@ set -e
 export BNAME_DATE=2021-01-01
 source bname
 
-bname_mask build:day 202001021630_D3A000_file.zip
+#bname_mask build:day 202001021630_D3A000_file.zip
+#bname_mask build:week 202001021630_D3A000_file.zip
+#bname_mask build:month 202001021630_D3A000_file.zip
+bname_mask build:year 202001021630_D3A000_file.zip
 
-0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
