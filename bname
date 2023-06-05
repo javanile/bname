@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
-was_sourced="${BASH_SOURCE[0]}"
-[ "${was_sourced}" = "$0" ] && was_sourced=
+_is_debug="${BNAME_DEBUG:-}"
+_is_sourced="${BASH_SOURCE[0]}"
+[ "${_is_sourced}" = "$0" ] && _is_sourced=
 
 key_encoder_string="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-#echo "$bname_bucket"
-#echo "Files: $bname_files"
-#for bname_cursor in $bname_files; do
-#  echo "f: $bname_cursor"
-#done
 
 function bname_key() {
   #date -d "${BNAME_DATE}" '+%y%m%d%U'
@@ -22,12 +17,12 @@ function bname_key() {
 }
 
 function bname_key_year() {
-  local key_index=$(( $(date -d "${BNAME_DATE}" '+%y') - 20 ))
+  local key_index=$(( $(date -d "${BNAME_DATE}" '+%-y') - 20 ))
   echo "${key_encoder_string:$key_index:1}"
 }
 
 function bname_key_month() {
-  local key_index=$(( $(date -d "${BNAME_DATE}" '+%m') - 0 ))
+  local key_index=$(( $(date -d "${BNAME_DATE}" '+%-m') - 0 ))
   echo "${key_encoder_string:$key_index:1}"
 }
 
@@ -36,7 +31,7 @@ function bname_key_week() {
 }
 
 function bname_key_day() {
-  local key_index=$(( $(date -d "${BNAME_DATE}" '+%d') - 0 ))
+  local key_index=$(( $(date -d "${BNAME_DATE}" '+%-d') - 0 ))
   echo "${key_encoder_string:$key_index:1}"
 }
 
@@ -147,15 +142,15 @@ function bname_mask() {
       ;;
     clean:week)
       # shellcheck disable=SC2001
-      bname_char_mask "$2" "5 6 7 8 9 10 11 12 16 17"
+      bname_char_mask "$2" "1 2 3 4 5 6 7 8 9 10 11 12 15 16 17 18 19"
       ;;
     clean:month)
       # shellcheck disable=SC2001
-      bname_char_mask "$2" "7 8 9 10 11 12 17 18 19"
+      bname_char_mask "$2" "1 2 3 4 5 6 7 8 9 10 11 12 15 16 17 18 19"
       ;;
     clean:year)
       # shellcheck disable=SC2001
-      bname_char_mask "$2" "5 6 7 8 9 10 11 12 16 17 18 19"
+      bname_char_mask "$2" "1 2 3 4 5 6 7 8 9 10 11 12 15 16 17 18 19"
       ;;
   esac
 }
@@ -206,25 +201,16 @@ function bname_build() {
 function bname_clean() {
   bname_count=0
   bname_clean=no
-  bname_stage=$1
-  bname_snapshot=$(bname_snapshot "${bname_stage}" "${bname_file}")
-  retention=$(bname_retention "${bname_stage}")
-  for file in $bname_bucket; do
-    match=$(bname_match "build:${bname_stage}" "$bname_snapshot" "$file")
-    [ "${match}" = "yes" ] && continue
+  local stage=$1
+  bname_snapshot=$(bname_snapshot "${stage}" "${bname_file}")
+  retention=$(bname_retention "${stage}")
+  for file0 in $bname_bucket; do
+    for file1 in $bname_bucket; do
+      [ "$file0" = "$file1" ] && continue
+      match=$(bname_match "clean:${stage}" "$file0" "$file1")
 
-    match=$(bname_match "clean:${bname_stage}" "$bname_snapshot" "$file")
-    if [ "${match}" = "yes" ]; then
-      bname_clean=yes
-      if [ "${bname_clean}" = "yes" ]; then
-        bname_count=$((++bname_count))
-      fi
-      if [ "${bname_count}" -ge "${retention}" ]; then
-        echo "- ${file}"
-      else
-        echo "# ignore: $file (by retention ${bname_count}<${retention})"
-      fi
-    fi
+      echo "# clean check: $file0 vs $file1 ($match)" >&2
+    done
   done
 }
 
@@ -252,7 +238,7 @@ function main() {
 ##
 #
 ##
-if [ -n "${was_sourced}" ]; then
+if [ -n "${_is_sourced}" ]; then
   export -f bname_retention
 else
   main "${@}"
